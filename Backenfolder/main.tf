@@ -22,7 +22,7 @@ resource "azurerm_resource_group" "backendpractice" {
 }
 
 resource "azurerm_storage_account" "backendstorage" {
-  name                     = "mainstoragebacken33"
+  name                     = "mainstoragebacken334"
   resource_group_name      = azurerm_resource_group.backendpractice.name
   location                 = azurerm_resource_group.backendpractice.location
   account_tier             = "Standard"
