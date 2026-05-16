@@ -11,11 +11,11 @@ new_location = "central india"
 ramu = ["raja", "raja1", "raja2"]
 
 
-shyam = ["shyam", "shyam1", "shyam2"]   
+shyam = ["shyam", "shyam1", "shyam2"]
 
 
 apple = {
-    apple1 = "central india"
-    apple2 = "northcentralus"
-    apple3 = "west india"
+  apple1 = "central india"
+  apple2 = "northcentralus"
+  apple3 = "west india"
 }

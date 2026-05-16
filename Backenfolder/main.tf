@@ -2,18 +2,16 @@
 terraform {
   required_providers {
     azurerm = {
-      source  = "hashicorp/azurerm"
+      source = "hashicorp/azurerm"
       # version = "~> 4.70"
     }
   }
 }
 
 provider "azurerm" {
-  features {}
-subscription_id = "9097d0f8-4798-48d3-891f-83da77060e96"
+  features {
 
-    
-  
+  }
 }
 
 resource "azurerm_resource_group" "backendpractice" {

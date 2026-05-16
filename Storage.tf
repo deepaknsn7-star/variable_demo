@@ -32,7 +32,7 @@ resource "azurerm_storage_account" "deep_storage3" {
 }
 
 resource "azurerm_storage_account" "deepu_storage4" {
-  depends_on = [ azurerm_resource_group.daksh]
+  depends_on               = [azurerm_resource_group.daksh]
   name                     = "storagedeep44${random_string.random1.result}"
   resource_group_name      = "rg_test_Practice"
   location                 = azurerm_resource_group.daksh.location
@@ -45,7 +45,7 @@ resource "azurerm_storage_account" "deepu_storage4" {
 }
 
 resource "azurerm_storage_account" "deepu_storage9" {
-  depends_on = [ azurerm_storage_account.deep_storage1]
+  depends_on               = [azurerm_storage_account.deep_storage1]
   name                     = "storagedeep55${random_string.random1.result}"
   resource_group_name      = "rg_test_Practice"
   location                 = "westus"
@@ -59,7 +59,7 @@ resource "azurerm_storage_account" "deepu_storage9" {
 
 
 resource "azurerm_storage_account" "deepu_storage66" {
-  depends_on = [ azurerm_storage_account.deepu_storage4]
+  depends_on               = [azurerm_storage_account.deepu_storage4]
   name                     = "storagedeep466${random_string.random1.result}"
   resource_group_name      = "rg_test_Practice"
   location                 = "westus"
@@ -86,7 +86,7 @@ resource "azurerm_storage_account" "deepu_storage690" {
   location                 = "east us"
   account_tier             = "Standard"
   account_replication_type = "ZRS"
-  depends_on = [ azurerm_resource_group.daksh]
+  depends_on               = [azurerm_resource_group.daksh]
 
 }
 
