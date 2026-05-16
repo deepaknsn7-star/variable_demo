@@ -136,18 +136,6 @@ stages:
         backendAzureRmKey: '$(tfStateFile)'
 
     # ==========================================
-    # Terraform Validate
-    # ==========================================
-    - task: TerraformTask@5
-      displayName: 'Terraform Validate - Main'
-      inputs:
-        provider: 'azurerm'
-        command: 'validate'
-        workingDirectory: '$(mainWorkingDir)'
-
-    
-
-    # ==========================================
     # Install tfsec
     # ==========================================
     - script: |
