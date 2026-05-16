@@ -7,8 +7,8 @@ terraform {
   }
   backend "azurerm" {
     
-    resource_group_name = "main_rg1"            
-    storage_account_name = "mainstoragebacken334"                             
+    resource_group_name = "main_rg2"            
+    storage_account_name = "mainstoragebacken22"                             
     container_name       = "maincontainer"                              
     
   }
