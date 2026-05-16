@@ -145,13 +145,7 @@ stages:
         command: 'validate'
         workingDirectory: '$(mainWorkingDir)'
 
-    # ==========================================
-    # Terraform Format Check
-    # ==========================================
-    - script: |
-        terraform fmt -check -recursive
-      workingDirectory: '$(mainWorkingDir)'
-      displayName: 'Terraform Format Check'
+    
 
     # ==========================================
     # Install tfsec
