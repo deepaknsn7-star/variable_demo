@@ -17,7 +17,7 @@ subscription_id = "9097d0f8-4798-48d3-891f-83da77060e96"
 }
 
 resource "azurerm_resource_group" "backendpractice" {
-  name     = "main_rg"
+  name     = "main_rg1"
   location = "centralindia"
 }
 
