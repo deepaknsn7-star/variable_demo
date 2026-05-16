@@ -1,0 +1,252 @@
+trigger: none
+
+pool:
+  name: deepak
+
+variables:
+  terraformVersion: 'latest'
+
+  # =========================
+  # Backend Folder
+  # =========================
+  backendWorkingDir: '$(System.DefaultWorkingDirectory)/backend'
+
+  # =========================
+  # Main Infra Folder
+  # =========================
+  mainWorkingDir: '$(System.DefaultWorkingDirectory)/main'
+
+  # =========================
+  # Azure Service Connection
+  # =========================
+  azureServiceConnection: 'demo_connection'
+
+  # =========================
+  # Backend Details
+  # =========================
+  tfStateRG: 'main_rg'
+  tfStateStorage: 'mainstoragebacken33'
+  tfStateContainer: 'maincontainer'
+  tfStateFile: 'prod.terraform.tfstate'
+
+stages:
+
+# ====================================================================================
+# STAGE 1 : BACKEND CREATION
+# ====================================================================================
+- stage: Backend_Setup
+  displayName: 'Create Terraform Backend Infrastructure'
+
+  jobs:
+  - job: Backend_Infra
+    displayName: 'Deploy Backend Resources'
+
+    steps:
+
+    # =========================
+    # Install Terraform
+    # =========================
+    - task: TerraformInstaller@1
+      displayName: 'Install Terraform'
+      inputs:
+        terraformVersion: $(terraformVersion)
+
+    # =========================
+    # Terraform Init
+    # =========================
+    - task: TerraformTask@5
+      displayName: 'Terraform Init - Backend'
+      inputs:
+        provider: 'azurerm'
+        command: 'init'
+        workingDirectory: '$(backendWorkingDir)'
+        commandOptions: '-upgrade'
+
+    # =========================
+    # Terraform Validate
+    # =========================
+    - task: TerraformTask@5
+      displayName: 'Terraform Validate - Backend'
+      inputs:
+        provider: 'azurerm'
+        command: 'validate'
+        workingDirectory: '$(backendWorkingDir)'
+
+    # =========================
+    # Terraform Format Check
+    # =========================
+    - script: |
+        terraform fmt -check -recursive
+      workingDirectory: '$(backendWorkingDir)'
+      displayName: 'Terraform FMT Check'
+
+    # =========================
+    # Install tfsec
+    # =========================
+    - script: |
+        curl -s https://raw.githubusercontent.com/aquasecurity/tfsec/master/scripts/install_linux.sh | bash
+      displayName: 'Install tfsec'
+
+    # =========================
+    # Run tfsec
+    # =========================
+    - script: |
+        tfsec $(backendWorkingDir)
+      displayName: 'Run tfsec Scan'
+
+    # =========================
+    # Install Checkov
+    # =========================
+    - script: |
+        python3 -m pip install checkov
+      displayName: 'Install Checkov'
+
+    # =========================
+    # Run Checkov
+    # =========================
+    - script: |
+        checkov -d $(backendWorkingDir)
+      displayName: 'Run Checkov Scan'
+
+    # =========================
+    # Terraform Plan
+    # =========================
+    - task: TerraformTask@5
+      displayName: 'Terraform Plan - Backend'
+      inputs:
+        provider: 'azurerm'
+        command: 'plan'
+        workingDirectory: '$(backendWorkingDir)'
+        environmentServiceNameAzureRM: '$(azureServiceConnection)'
+
+    # =========================
+    # Terraform Apply
+    # =========================
+    - task: TerraformTask@5
+      displayName: 'Terraform Apply - Backend'
+      inputs:
+        provider: 'azurerm'
+        command: 'apply'
+        workingDirectory: '$(backendWorkingDir)'
+        environmentServiceNameAzureRM: '$(azureServiceConnection)'
+        commandOptions: '-auto-approve'
+
+# ====================================================================================
+# STAGE 2 : MAIN INFRA DEPLOYMENT
+# ====================================================================================
+- stage: Main_Infrastructure
+  displayName: 'Deploy Main Infrastructure'
+  dependsOn: Backend_Setup
+  condition: succeeded()
+
+  jobs:
+  - job: Main_Infra
+    displayName: 'Deploy Main Terraform Infra'
+
+    steps:
+
+    # =========================
+    # Install Terraform
+    # =========================
+    - task: TerraformInstaller@1
+      displayName: 'Install Terraform'
+      inputs:
+        terraformVersion: $(terraformVersion)
+
+    # =========================
+    # Terraform Init
+    # =========================
+    - task: TerraformTask@5
+      displayName: 'Terraform Init - Main'
+      inputs:
+        provider: 'azurerm'
+        command: 'init'
+        workingDirectory: '$(mainWorkingDir)'
+
+        backendServiceArm: '$(azureServiceConnection)'
+        backendAzureRmResourceGroupName: '$(tfStateRG)'
+        backendAzureRmStorageAccountName: '$(tfStateStorage)'
+        backendAzureRmContainerName: '$(tfStateContainer)'
+        backendAzureRmKey: '$(tfStateFile)'
+
+    # =========================
+    # Terraform Validate
+    # =========================
+    - task: TerraformTask@5
+      displayName: 'Terraform Validate - Main'
+      inputs:
+        provider: 'azurerm'
+        command: 'validate'
+        workingDirectory: '$(mainWorkingDir)'
+
+    # =========================
+    # Terraform Format Check
+    # =========================
+    - script: |
+        terraform fmt -check -recursive
+      workingDirectory: '$(mainWorkingDir)'
+      displayName: 'Terraform FMT Check'
+
+    # =========================
+    # tfsec Scan
+    # =========================
+    - script: |
+        tfsec $(mainWorkingDir)
+      displayName: 'Run tfsec Scan'
+
+    # =========================
+    # Checkov Scan
+    # =========================
+    - script: |
+        checkov -d $(mainWorkingDir)
+      displayName: 'Run Checkov Scan'
+
+    # =========================
+    # SonarQube Prepare
+    # =========================
+    - task: SonarQubePrepare@5
+      displayName: 'Prepare SonarQube Analysis'
+      inputs:
+        SonarQube: 'sonarqube-service-connection'
+        scannerMode: 'CLI'
+        configMode: 'manual'
+        cliProjectKey: 'terraform-project'
+        cliProjectName: 'terraform-project'
+        cliSources: '$(mainWorkingDir)'
+
+    # =========================
+    # SonarQube Analyze
+    # =========================
+    - task: SonarQubeAnalyze@5
+      displayName: 'Run SonarQube Analysis'
+
+    # =========================
+    # SonarQube Publish
+    # =========================
+    - task: SonarQubePublish@5
+      displayName: 'Publish SonarQube Report'
+      inputs:
+        pollingTimeoutSec: '300'
+
+    # =========================
+    # Terraform Plan
+    # =========================
+    - task: TerraformTask@5
+      displayName: 'Terraform Plan - Main'
+      inputs:
+        provider: 'azurerm'
+        command: 'plan'
+        workingDirectory: '$(mainWorkingDir)'
+        environmentServiceNameAzureRM: '$(azureServiceConnection)'
+
+    # =========================
+    # Terraform Apply
+    # =========================
+    - task: TerraformTask@5
+      displayName: 'Terraform Apply - Main'
+      inputs:
+        provider: 'azurerm'
+        command: 'apply'
+        workingDirectory: '$(mainWorkingDir)'
+        environmentServiceNameAzureRM: '$(azureServiceConnection)'
+        commandOptions: '-auto-approve'
