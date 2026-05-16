@@ -17,12 +17,12 @@ subscription_id = "9097d0f8-4798-48d3-891f-83da77060e96"
 }
 
 resource "azurerm_resource_group" "backendpractice" {
-  name     = "main_rg1"
+  name     = "main_rg2"
   location = "centralindia"
 }
 
 resource "azurerm_storage_account" "backendstorage" {
-  name                     = "mainstoragebacken334"
+  name                     = "mainstoragebacken22"
   resource_group_name      = azurerm_resource_group.backendpractice.name
   location                 = azurerm_resource_group.backendpractice.location
   account_tier             = "Standard"
