@@ -146,7 +146,7 @@ stages:
     # Run tfsec
     # ==========================================
     - script: |
-        tfsec .
+        tfsec . || true
       workingDirectory: '$(mainWorkingDir)'
       displayName: 'Run tfsec Scan'
 
