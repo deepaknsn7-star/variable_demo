@@ -26,8 +26,8 @@ variables:
   # ==========================================
   # Terraform Backend Details
   # ==========================================
-  tfStateRG: 'main_rg1'
-  tfStateStorage: 'mainstoragebacken334'
+  tfStateRG: 'main_rg2'
+  tfStateStorage: 'mainstoragebacken22'
   tfStateContainer: 'maincontainer'
   tfStateFile: 'prod.terraform.tfstate'
 
