@@ -4,26 +4,26 @@ pool:
   name: deepak
 
 variables:
+
+  # ==========================================
+  # Terraform Version
+  # ==========================================
   terraformVersion: 'latest'
 
-  # =========================
-  # Backend Folder
-  # =========================
+  # ==========================================
+  # Working Directories
+  # ==========================================
   backendWorkingDir: '$(System.DefaultWorkingDirectory)/backend'
-
-  # =========================
-  # Main Infra Folder
-  # =========================
   mainWorkingDir: '$(System.DefaultWorkingDirectory)/main'
 
-  # =========================
+  # ==========================================
   # Azure Service Connection
-  # =========================
+  # ==========================================
   azureServiceConnection: 'demo_connection'
 
-  # =========================
-  # Terraform Backend Details
-  # =========================
+  # ==========================================
+  # Remote Backend Details
+  # ==========================================
   tfStateRG: 'main_rg'
   tfStateStorage: 'mainstoragebacken33'
   tfStateContainer: 'maincontainer'
@@ -31,39 +31,40 @@ variables:
 
 stages:
 
-# ====================================================================================
-# STAGE 1 : BACKEND INFRASTRUCTURE
-# ====================================================================================
+# ======================================================================================
+# STAGE 1 : CREATE BACKEND INFRA
+# ======================================================================================
 - stage: Backend_Setup
-  displayName: 'Deploy Backend Infrastructure'
+  displayName: 'Create Backend Infrastructure'
 
   jobs:
   - job: Backend_Infra
-    displayName: 'Create Terraform Backend'
+    displayName: 'Deploy Backend Resources'
 
     steps:
 
-    # =========================
+    # ==========================================
     # Install Terraform
-    # =========================
+    # ==========================================
     - task: TerraformInstaller@1
       displayName: 'Install Terraform'
       inputs:
         terraformVersion: $(terraformVersion)
 
-    # =========================
-    # Terraform Init
-    # =========================
+    # ==========================================
+    # Terraform Init (LOCAL STATE)
+    # ==========================================
     - task: TerraformTask@5
       displayName: 'Terraform Init - Backend'
       inputs:
         provider: 'azurerm'
         command: 'init'
         workingDirectory: '$(backendWorkingDir)'
+        environmentServiceNameAzureRM: '$(azureServiceConnection)'
 
-    # =========================
+    # ==========================================
     # Terraform Validate
-    # =========================
+    # ==========================================
     - task: TerraformTask@5
       displayName: 'Terraform Validate - Backend'
       inputs:
@@ -71,45 +72,61 @@ stages:
         command: 'validate'
         workingDirectory: '$(backendWorkingDir)'
 
-    # =========================
+    # ==========================================
     # Terraform Format Check
-    # =========================
+    # ==========================================
     - script: |
         terraform fmt -check -recursive
       workingDirectory: '$(backendWorkingDir)'
       displayName: 'Terraform Format Check'
 
-    # =========================
+    # ==========================================
     # Install tfsec
-    # =========================
+    # ==========================================
     - script: |
         curl -s https://raw.githubusercontent.com/aquasecurity/tfsec/master/scripts/install_linux.sh | bash
       displayName: 'Install tfsec'
 
-    # =========================
-    # Run tfsec Scan
-    # =========================
+    # ==========================================
+    # Run tfsec
+    # ==========================================
     - script: |
         tfsec $(backendWorkingDir)
       displayName: 'Run tfsec Scan'
 
-    # =========================
+    # ==========================================
     # Install Checkov
-    # =========================
+    # ==========================================
     - script: |
         python3 -m pip install checkov
       displayName: 'Install Checkov'
 
-    # =========================
-    # Run Checkov Scan
-    # =========================
+    # ==========================================
+    # Run Checkov
+    # ==========================================
     - script: |
         checkov -d $(backendWorkingDir)
       displayName: 'Run Checkov Scan'
 
-    # =========================
+    # ==========================================
+    # Install TFLint
+    # ==========================================
+    - script: |
+        curl -s https://raw.githubusercontent.com/terraform-linters/tflint/master/install_linux.sh | bash
+      displayName: 'Install TFLint'
+
+    # ==========================================
+    # Run TFLint
+    # ==========================================
+    - script: |
+        tflint --init
+        tflint
+      workingDirectory: '$(backendWorkingDir)'
+      displayName: 'Run TFLint'
+
+    # ==========================================
     # Terraform Plan
-    # =========================
+    # ==========================================
     - task: TerraformTask@5
       displayName: 'Terraform Plan - Backend'
       inputs:
@@ -118,9 +135,9 @@ stages:
         workingDirectory: '$(backendWorkingDir)'
         environmentServiceNameAzureRM: '$(azureServiceConnection)'
 
-    # =========================
+    # ==========================================
     # Terraform Apply
-    # =========================
+    # ==========================================
     - task: TerraformTask@5
       displayName: 'Terraform Apply - Backend'
       inputs:
@@ -130,9 +147,9 @@ stages:
         environmentServiceNameAzureRM: '$(azureServiceConnection)'
         commandOptions: '-auto-approve'
 
-# ====================================================================================
-# STAGE 2 : MAIN INFRASTRUCTURE
-# ====================================================================================
+# ======================================================================================
+# STAGE 2 : DEPLOY MAIN INFRA
+# ======================================================================================
 - stage: Main_Infrastructure
   displayName: 'Deploy Main Infrastructure'
   dependsOn: Backend_Setup
@@ -140,21 +157,21 @@ stages:
 
   jobs:
   - job: Main_Infra
-    displayName: 'Deploy Main Infra'
+    displayName: 'Deploy Main Terraform Infrastructure'
 
     steps:
 
-    # =========================
+    # ==========================================
     # Install Terraform
-    # =========================
+    # ==========================================
     - task: TerraformInstaller@1
       displayName: 'Install Terraform'
       inputs:
         terraformVersion: $(terraformVersion)
 
-    # =========================
-    # Terraform Init
-    # =========================
+    # ==========================================
+    # Terraform Init (REMOTE BACKEND)
+    # ==========================================
     - task: TerraformTask@5
       displayName: 'Terraform Init - Main'
       inputs:
@@ -168,9 +185,9 @@ stages:
         backendAzureRmContainerName: '$(tfStateContainer)'
         backendAzureRmKey: '$(tfStateFile)'
 
-    # =========================
+    # ==========================================
     # Terraform Validate
-    # =========================
+    # ==========================================
     - task: TerraformTask@5
       displayName: 'Terraform Validate - Main'
       inputs:
@@ -178,47 +195,40 @@ stages:
         command: 'validate'
         workingDirectory: '$(mainWorkingDir)'
 
-    # =========================
+    # ==========================================
     # Terraform Format Check
-    # =========================
+    # ==========================================
     - script: |
         terraform fmt -check -recursive
       workingDirectory: '$(mainWorkingDir)'
       displayName: 'Terraform Format Check'
 
-    # =========================
-    # tfsec Scan
-    # =========================
+    # ==========================================
+    # Run tfsec
+    # ==========================================
     - script: |
         tfsec $(mainWorkingDir)
       displayName: 'Run tfsec Scan'
 
-    # =========================
-    # Checkov Scan
-    # =========================
+    # ==========================================
+    # Run Checkov
+    # ==========================================
     - script: |
         checkov -d $(mainWorkingDir)
       displayName: 'Run Checkov Scan'
 
-    # =========================
-    # Install TFLint
-    # =========================
-    - script: |
-        curl -s https://raw.githubusercontent.com/terraform-linters/tflint/master/install_linux.sh | bash
-      displayName: 'Install TFLint'
-
-    # =========================
+    # ==========================================
     # Run TFLint
-    # =========================
+    # ==========================================
     - script: |
         tflint --init
         tflint
       workingDirectory: '$(mainWorkingDir)'
       displayName: 'Run TFLint'
 
-    # =========================
+    # ==========================================
     # Terraform Plan
-    # =========================
+    # ==========================================
     - task: TerraformTask@5
       displayName: 'Terraform Plan - Main'
       inputs:
@@ -227,9 +237,9 @@ stages:
         workingDirectory: '$(mainWorkingDir)'
         environmentServiceNameAzureRM: '$(azureServiceConnection)'
 
-    # =========================
+    # ==========================================
     # Terraform Apply
-    # =========================
+    # ==========================================
     - task: TerraformTask@5
       displayName: 'Terraform Apply - Main'
       inputs:
